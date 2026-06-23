@@ -1,7 +1,7 @@
 import React from "react";
 import { AlertTriangle, FileSpreadsheet, Layers3, Loader2, LockKeyhole, Network, Sparkles, UploadCloud } from "lucide-react";
-import { formatBytes } from "../lib/formatters";
-import { GovernanceItem } from "./shared";
+import { GovernanceItem } from "../../../components/ui/GovernanceItem";
+import { formatBytes } from "../../../lib/formatters";
 
 export function IntakePanel({ file, isUploading, error, onFileChange, onUpload }) {
   return (

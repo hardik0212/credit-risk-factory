@@ -19,6 +19,10 @@ backend/   FastAPI upload and profiling API
 frontend/  Vite React interface
 ```
 
+Frontend routing starts in `frontend/src/routes.js`. Pages live under `frontend/src/pages`, with Agent 1 implemented at `frontend/src/pages/AgentOnePage`. Shared UI lives under `frontend/src/components`.
+
+Backend reusable helpers live in `backend/app/functions.py`; `backend/app/profiling.py` is kept as the CSV profiling orchestrator.
+
 ## Run Locally
 
 ### One-command startup
@@ -60,4 +64,4 @@ Open the frontend URL shown by Vite. The app expects the backend at `http://loca
 
 The backend currently generates a compact profile, heuristic target recommendation, DQR signals, and initial variable-selection package. The frontend pauses before the next API/agent call so a human can approve the package. The intended next step is sending the approved Agent 1 package to Agent 2 for model development and validation.
 
-Reusable frontend components live under `frontend/src/components`, with app-level state orchestration kept in `frontend/src/main.jsx`.
+Reusable frontend components live under `frontend/src/components`, page-specific components live beside their page, and `frontend/src/main.jsx` only mounts the app.

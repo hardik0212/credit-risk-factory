@@ -2,13 +2,18 @@ import React, { useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import {
   AlertTriangle,
-  ArrowRight,
   BadgeCheck,
+  Building2,
   Database,
   FileSpreadsheet,
   Fingerprint,
+  Layers3,
   Loader2,
+  LockKeyhole,
+  Network,
+  Send,
   ShieldCheck,
+  SlidersHorizontal,
   Sparkles,
   UploadCloud,
 } from "lucide-react";
@@ -40,6 +45,12 @@ function App() {
   const changedTypeCount = useMemo(() => {
     return reviewedColumns.filter((column) => column.reviewed_type !== column.semantic_type).length;
   }, [reviewedColumns]);
+
+  const excludedColumnCount = useMemo(() => {
+    return reviewedColumns.filter((column) => column.reviewed_type === "exclude").length;
+  }, [reviewedColumns]);
+
+  const leakageCount = recommendation?.possible_leakage_columns?.length || 0;
 
   async function handleUpload() {
     if (!file) return;
@@ -97,24 +108,44 @@ function App() {
 
   return (
     <main className="app-shell">
+      <nav className="topbar">
+        <div className="brand-mark">
+          <Building2 size={20} />
+          <span>Credit Risk Factory</span>
+        </div>
+        <div className="topbar-actions">
+          <span>Dataset onboarding</span>
+          <span>Human governed</span>
+          <span>API gated</span>
+        </div>
+      </nav>
+
       <section className="hero">
         <div className="hero-copy">
           <div className="eyebrow">
             <ShieldCheck size={18} />
-            Agentic Credit Risk Factory
+            Executive model factory
           </div>
-          <h1>Data Understanding Agent</h1>
+          <h1>Credit data readiness, governed before the first API call.</h1>
           <p>
-            Upload a full CSV, keep the data on the platform, and send only a compact schema profile
-            to the reasoning layer.
+            A business-facing control room for profiling a new lending dataset, reviewing AI
+            recommendations, and approving the schema package before downstream agents take over.
           </p>
+          <div className="hero-stats">
+            <StatStrip label="Review stage" value={confirmedSchema ? "Approved" : profile ? "In review" : "Awaiting data"} />
+            <StatStrip label="Data movement" value="Local file" />
+            <StatStrip label="Next gate" value="Schema approval" />
+          </div>
         </div>
         <div className="hero-panel">
-          <PipelineStep icon={<UploadCloud />} label="Upload CSV" active />
-          <ArrowRight className="pipeline-arrow" />
-          <PipelineStep icon={<Database />} label="Profile columns" active={Boolean(profile)} />
-          <ArrowRight className="pipeline-arrow" />
-          <PipelineStep icon={<Sparkles />} label="Detect target" active={Boolean(target)} />
+          <div className="hero-panel-header">
+            <span>Factory workflow</span>
+            <strong>{confirmedSchema ? "Schema package ready" : "Pre-submission review"}</strong>
+          </div>
+          <PipelineStep icon={<UploadCloud />} label="Intake" active />
+          <PipelineStep icon={<Database />} label="Profile" active={Boolean(profile)} />
+          <PipelineStep icon={<SlidersHorizontal />} label="Review" active={Boolean(profile)} />
+          <PipelineStep icon={<Send />} label="Submit" active={Boolean(confirmedSchema)} />
         </div>
       </section>
 
@@ -124,7 +155,7 @@ function App() {
             <FileSpreadsheet size={22} />
             <div>
               <h2>Dataset Intake</h2>
-              <p>CSV is stored locally; only profile metadata reaches the agent boundary.</p>
+              <p>Secure ingestion with compact profiling for the agent layer.</p>
             </div>
           </div>
 
@@ -144,6 +175,12 @@ function App() {
             {isUploading ? "Profiling dataset" : "Run Data Understanding"}
           </button>
 
+          <div className="control-stack">
+            <GovernanceItem icon={<LockKeyhole size={18} />} title="Full file retained" body="Only schema, summaries, and samples are prepared for the agent." />
+            <GovernanceItem icon={<Network size={18} />} title="API call paused" body="Submission is blocked until business review is confirmed." />
+            <GovernanceItem icon={<Layers3 size={18} />} title="Reusable package" body="The reviewed profile becomes the handoff contract for later agents." />
+          </div>
+
           {error && (
             <div className="error-box">
               <AlertTriangle size={18} />
@@ -161,7 +198,7 @@ function App() {
                 <Metric label="Rows" value={profile.row_count.toLocaleString()} />
                 <Metric label="Columns" value={profile.column_count.toLocaleString()} />
                 <Metric label="Target" value={target || "Review"} emphasis />
-                <Metric label="Overrides" value={changedTypeCount.toLocaleString()} />
+                <Metric label="Governance flags" value={(changedTypeCount + excludedColumnCount + leakageCount).toLocaleString()} />
               </div>
 
               <div className="recommendation-card">
@@ -171,8 +208,8 @@ function App() {
                 <div>
                   <h2>{target ? `Recommended target: ${target}` : "Target needs review"}</h2>
                   <p>
-                    The platform has produced a compact profile and stopped before the external API
-                    call. Human confirmation should happen here before model development begins.
+                    AI has prepared the schema recommendation. The business reviewer can confirm the
+                    target, override types, exclude fields, and approve the package for the next agent.
                   </p>
                   <label className="target-review">
                     <span>Target variable</span>
@@ -198,6 +235,18 @@ function App() {
                   icon={<AlertTriangle size={18} />}
                   items={recommendation.possible_leakage_columns}
                   empty="No leakage hints found"
+                />
+                <InsightList
+                  title="Reviewer Changes"
+                  icon={<SlidersHorizontal size={18} />}
+                  items={[`${changedTypeCount} type overrides`, `${excludedColumnCount} excluded fields`]}
+                  empty="No reviewer changes"
+                />
+                <InsightList
+                  title="Submission Status"
+                  icon={<Send size={18} />}
+                  items={[confirmedSchema ? "Approved for next agent" : "Awaiting schema approval"]}
+                  empty="Awaiting schema approval"
                 />
               </div>
 
@@ -270,11 +319,30 @@ function PipelineStep({ icon, label, active }) {
   );
 }
 
+function StatStrip({ label, value }) {
+  return (
+    <div className="stat-strip">
+      <span>{label}</span>
+      <strong>{value}</strong>
+    </div>
+  );
+}
+
 function Metric({ label, value, emphasis }) {
   return (
     <div className={`metric ${emphasis ? "emphasis" : ""}`}>
       <span>{label}</span>
       <strong>{value}</strong>
+    </div>
+  );
+}
+
+function GovernanceItem({ icon, title, body }) {
+  return (
+    <div className="governance-item">
+      <div>{icon}</div>
+      <span>{title}</span>
+      <p>{body}</p>
     </div>
   );
 }

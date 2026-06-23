@@ -1,3 +1,4 @@
+import React from "react";
 import { routes } from "./routes";
 
 export function App() {

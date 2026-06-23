@@ -21,6 +21,21 @@ frontend/  Vite React interface
 
 ## Run Locally
 
+### One-command startup
+
+From the repo root:
+
+```bash
+npm run dev
+```
+
+This creates the backend virtual environment if needed, installs backend/frontend dependencies, and starts both services.
+
+Open:
+
+- Frontend: `http://localhost:5173`
+- Backend health: `http://localhost:8000/api/health`
+
 ### Backend
 
 ```bash

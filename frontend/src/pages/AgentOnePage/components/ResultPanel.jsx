@@ -29,6 +29,8 @@ export function ResultPanel({
   const variableSelection = recommendation?.variable_selection || {};
   const selectedCandidateCount = variableSelection.selected_candidates?.length || 0;
   const reviewCandidateCount = variableSelection.review_candidates?.length || 0;
+  const aiStatus = recommendation?.ai_status;
+  const recommendationSource = recommendation?.recommendation_source === "openai" ? "OpenAI" : "Heuristic fallback";
 
   return (
     <div className="result-panel">
@@ -49,6 +51,10 @@ export function ResultPanel({
             Agent 1 has prepared the schema and initial variable-selection recommendation. Review the
             target, override types, exclude fields, and approve the package for Agent 2.
           </p>
+          <div className={`ai-status ${recommendation?.recommendation_source === "openai" ? "success" : "muted"}`}>
+            <span>{recommendationSource}</span>
+            <small>{aiStatus?.reason || "Compact profile reviewed without sending the full CSV."}</small>
+          </div>
           <label className="target-review">
             <span>Target variable</span>
             <select value={selectedTarget} onChange={(event) => onTargetChange(event.target.value)}>
@@ -65,7 +71,7 @@ export function ResultPanel({
         <InsightList title="ID Columns" icon={<Fingerprint size={18} />} items={recommendation.id_columns} empty="No obvious ID fields" />
         <InsightList title="Possible Leakage" icon={<AlertTriangle size={18} />} items={recommendation.possible_leakage_columns} empty="No leakage hints found" />
         <InsightList title="Reviewer Changes" icon={<SlidersHorizontal size={18} />} items={[`${changedTypeCount} type overrides`, `${excludedColumnCount} excluded fields`]} empty="No reviewer changes" />
-        <InsightList title="Agent 2 Handoff" icon={<Send size={18} />} items={[confirmedPackage ? "Variable package approved" : "Awaiting Agent 1 approval"]} empty="Awaiting Agent 1 approval" />
+        <InsightList title="AI Review" icon={<Send size={18} />} items={[`${recommendationSource}`, `Status: ${aiStatus?.status || "unknown"}`]} empty="AI status unavailable" />
       </div>
 
       <div className="handoff-card">

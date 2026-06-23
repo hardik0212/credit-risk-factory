@@ -40,6 +40,21 @@ Open:
 - Frontend: `http://localhost:5173`
 - Backend health: `http://localhost:8000/api/health`
 
+To enable the AI recommendation call, set an OpenAI key before starting:
+
+```bash
+export OPENAI_API_KEY="your-key"
+npm run dev
+```
+
+Optional:
+
+```bash
+export OPENAI_MODEL="gpt-4.1-mini"
+```
+
+The backend sends only the compact column profile and 100 sample rows to the AI API, not the full CSV.
+
 ### Backend
 
 ```bash

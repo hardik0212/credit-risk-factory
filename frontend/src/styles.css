@@ -17,7 +17,8 @@ body {
 }
 
 button,
-input {
+input,
+select {
   font: inherit;
 }
 
@@ -212,6 +213,22 @@ h1 {
   cursor: pointer;
 }
 
+.secondary-button {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid rgba(36, 88, 78, 0.18);
+  border-radius: 8px;
+  color: #24584e;
+  background: #e5f0eb;
+  font-weight: 850;
+  cursor: pointer;
+}
+
 .primary-button:disabled {
   cursor: not-allowed;
   opacity: 0.55;
@@ -308,6 +325,35 @@ h1 {
   color: #d9e4df;
 }
 
+.target-review {
+  display: grid;
+  gap: 8px;
+  max-width: 360px;
+  margin-top: 16px;
+}
+
+.target-review span {
+  color: #b8dccd;
+  font-size: 0.78rem;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.target-review select,
+.type-select {
+  width: 100%;
+  min-height: 38px;
+  border: 1px solid rgba(23, 33, 28, 0.14);
+  border-radius: 8px;
+  color: #17211c;
+  background: #ffffff;
+  font-weight: 750;
+}
+
+.target-review select {
+  padding: 0 12px;
+}
+
 .recommendation-icon {
   display: grid;
   flex: 0 0 44px;
@@ -381,6 +427,12 @@ h1 {
   border-bottom: 1px solid rgba(23, 33, 28, 0.08);
 }
 
+.table-header p {
+  margin-top: 4px;
+  color: #68746c;
+  line-height: 1.4;
+}
+
 .table-header span {
   color: #68746c;
   font-weight: 750;
@@ -393,7 +445,7 @@ h1 {
 table {
   width: 100%;
   border-collapse: collapse;
-  min-width: 680px;
+  min-width: 820px;
 }
 
 th,
@@ -413,6 +465,28 @@ th {
 td {
   color: #334039;
   overflow-wrap: anywhere;
+}
+
+.type-select {
+  min-width: 150px;
+  padding: 0 10px;
+  background: #fbf7ef;
+}
+
+.type-select.changed {
+  border-color: rgba(196, 83, 61, 0.5);
+  color: #8d321f;
+  background: #fff0ea;
+}
+
+.submission-ready {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 14px 16px;
+  color: #24584e;
+  background: #e5f0eb;
+  font-weight: 800;
 }
 
 @media (max-width: 980px) {
@@ -450,5 +524,10 @@ td {
 
   .recommendation-icon {
     margin-bottom: 12px;
+  }
+
+  .table-header {
+    align-items: flex-start;
+    flex-direction: column;
   }
 }

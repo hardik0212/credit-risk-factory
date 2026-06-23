@@ -15,23 +15,40 @@ import {
 import "./styles.css";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
+const TYPE_OPTIONS = ["numeric", "categorical", "date", "identifier", "target", "text", "exclude"];
 
 function App() {
   const [file, setFile] = useState(null);
   const [profile, setProfile] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState("");
+  const [typeOverrides, setTypeOverrides] = useState({});
+  const [selectedTarget, setSelectedTarget] = useState("");
+  const [confirmedSchema, setConfirmedSchema] = useState(null);
 
   const recommendation = profile?.agent_recommendation;
-  const target = recommendation?.recommended_target;
+  const target = selectedTarget || recommendation?.recommended_target;
 
-  const compactColumns = useMemo(() => profile?.columns?.slice(0, 12) || [], [profile]);
+  const reviewedColumns = useMemo(() => {
+    if (!profile?.columns) return [];
+    return profile.columns.map((column) => ({
+      ...column,
+      reviewed_type: typeOverrides[column.name] || column.semantic_type,
+    }));
+  }, [profile, typeOverrides]);
+
+  const changedTypeCount = useMemo(() => {
+    return reviewedColumns.filter((column) => column.reviewed_type !== column.semantic_type).length;
+  }, [reviewedColumns]);
 
   async function handleUpload() {
     if (!file) return;
     setIsUploading(true);
     setError("");
     setProfile(null);
+    setTypeOverrides({});
+    setSelectedTarget("");
+    setConfirmedSchema(null);
 
     const formData = new FormData();
     formData.append("file", file);
@@ -47,11 +64,35 @@ function App() {
         throw new Error(payload.detail || "Upload failed");
       }
       setProfile(payload);
+      setSelectedTarget(payload.agent_recommendation?.recommended_target || "");
     } catch (uploadError) {
       setError(uploadError.message);
     } finally {
       setIsUploading(false);
     }
+  }
+
+  function handleTypeChange(columnName, nextType) {
+    setTypeOverrides((current) => ({ ...current, [columnName]: nextType }));
+    setConfirmedSchema(null);
+  }
+
+  function handleTargetChange(nextTarget) {
+    setSelectedTarget(nextTarget);
+    setConfirmedSchema(null);
+  }
+
+  function handleConfirmSchema() {
+    setConfirmedSchema({
+      dataset_id: profile.dataset_id,
+      target_variable: selectedTarget,
+      columns: reviewedColumns.map((column) => ({
+        name: column.name,
+        suggested_type: column.semantic_type,
+        reviewed_type: column.reviewed_type,
+        missing_pct: column.missing_pct,
+      })),
+    });
   }
 
   return (
@@ -120,7 +161,7 @@ function App() {
                 <Metric label="Rows" value={profile.row_count.toLocaleString()} />
                 <Metric label="Columns" value={profile.column_count.toLocaleString()} />
                 <Metric label="Target" value={target || "Review"} emphasis />
-                <Metric label="LLM call" value="Ready" />
+                <Metric label="Overrides" value={changedTypeCount.toLocaleString()} />
               </div>
 
               <div className="recommendation-card">
@@ -133,6 +174,15 @@ function App() {
                     The platform has produced a compact profile and stopped before the external API
                     call. Human confirmation should happen here before model development begins.
                   </p>
+                  <label className="target-review">
+                    <span>Target variable</span>
+                    <select value={selectedTarget} onChange={(event) => handleTargetChange(event.target.value)}>
+                      <option value="">Select target</option>
+                      {profile.columns.map((column) => (
+                        <option value={column.name} key={column.name}>{column.name}</option>
+                      ))}
+                    </select>
+                  </label>
                 </div>
               </div>
 
@@ -153,24 +203,42 @@ function App() {
 
               <div className="table-card">
                 <div className="table-header">
-                  <h2>Column Profile Preview</h2>
-                  <span>{compactColumns.length} of {profile.column_count}</span>
+                  <div>
+                    <h2>Human Schema Review</h2>
+                    <p>Adjust suggested types before the profile is submitted to the next agent.</p>
+                  </div>
+                  <button className="secondary-button" onClick={handleConfirmSchema}>
+                    <BadgeCheck size={17} />
+                    Confirm schema
+                  </button>
                 </div>
                 <div className="table-wrap">
                   <table>
                     <thead>
                       <tr>
                         <th>Column</th>
-                        <th>Type</th>
+                        <th>Suggested type</th>
+                        <th>Reviewed type</th>
                         <th>Missing</th>
                         <th>Top values</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {compactColumns.map((column) => (
+                      {reviewedColumns.map((column) => (
                         <tr key={column.name}>
                           <td>{column.name}</td>
                           <td>{column.semantic_type}</td>
+                          <td>
+                            <select
+                              className={column.reviewed_type !== column.semantic_type ? "type-select changed" : "type-select"}
+                              value={column.reviewed_type}
+                              onChange={(event) => handleTypeChange(column.name, event.target.value)}
+                            >
+                              {TYPE_OPTIONS.map((type) => (
+                                <option value={type} key={type}>{type}</option>
+                              ))}
+                            </select>
+                          </td>
                           <td>{column.missing_pct}%</td>
                           <td>{Object.keys(column.top_values || {}).slice(0, 3).join(", ") || "-"}</td>
                         </tr>
@@ -178,6 +246,12 @@ function App() {
                     </tbody>
                   </table>
                 </div>
+                {confirmedSchema && (
+                  <div className="submission-ready">
+                    <BadgeCheck size={18} />
+                    Reviewed schema ready for final submission with {changedTypeCount} type override{changedTypeCount === 1 ? "" : "s"}.
+                  </div>
+                )}
               </div>
             </>
           )}

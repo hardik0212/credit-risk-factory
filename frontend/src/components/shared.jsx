@@ -1,3 +1,4 @@
+import React from "react";
 import { Database } from "lucide-react";
 
 export function Metric({ label, value, emphasis }) {

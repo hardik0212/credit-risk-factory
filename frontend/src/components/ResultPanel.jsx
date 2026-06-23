@@ -1,3 +1,4 @@
+import React from "react";
 import { AlertTriangle, BadgeCheck, Fingerprint, Send, SlidersHorizontal } from "lucide-react";
 import { TYPE_OPTIONS } from "../lib/constants";
 import { EmptyState, InsightList, Metric } from "./shared";

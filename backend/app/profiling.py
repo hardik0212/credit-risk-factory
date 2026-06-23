@@ -149,6 +149,9 @@ def build_agent_recommendation(columns: list[dict[str, Any]]) -> dict[str, Any]:
     id_columns = []
     date_columns = []
     leakage_columns = []
+    selected_candidates = []
+    review_candidates = []
+    excluded_candidates = []
 
     for column in columns:
         name = column["name"].lower()
@@ -182,6 +185,30 @@ def build_agent_recommendation(columns: list[dict[str, Any]]) -> dict[str, Any]:
         if any(hint in name for hint in LEAKAGE_HINTS):
             leakage_columns.append(column["name"])
 
+    target_names = {item["name"] for item in scored_targets[:5]}
+    for column in columns:
+        name = column["name"]
+        lowered = name.lower()
+        is_identifier = column["semantic_type"] == "identifier"
+        is_leakage = any(hint in lowered for hint in LEAKAGE_HINTS)
+        is_target = name in target_names
+        is_constant = column["unique_count_estimate"] in (0, 1)
+
+        if is_target:
+            excluded_candidates.append({"name": name, "reason": "Target candidate, not an input variable."})
+        elif is_identifier:
+            excluded_candidates.append({"name": name, "reason": "Identifier field with limited modeling value."})
+        elif is_leakage:
+            excluded_candidates.append({"name": name, "reason": "Potential post-outcome leakage field."})
+        elif is_constant:
+            excluded_candidates.append({"name": name, "reason": "Constant or empty field."})
+        elif column["missing_pct"] >= 60:
+            review_candidates.append({"name": name, "reason": "High missingness; needs business review."})
+        elif column["semantic_type"] == "text":
+            review_candidates.append({"name": name, "reason": "Free-text field; may need encoding or exclusion."})
+        else:
+            selected_candidates.append({"name": name, "reason": "Usable candidate after initial quality and leakage checks."})
+
     scored_targets.sort(key=lambda item: item["confidence"], reverse=True)
     recommended_target = scored_targets[0]["name"] if scored_targets else None
 
@@ -191,9 +218,15 @@ def build_agent_recommendation(columns: list[dict[str, Any]]) -> dict[str, Any]:
         "id_columns": id_columns,
         "date_columns": date_columns,
         "possible_leakage_columns": leakage_columns,
+        "variable_selection": {
+            "agent_scope": "Agent 1 handles ingestion, profiling, target detection, DQR signals, and initial variable selection.",
+            "selected_candidates": selected_candidates,
+            "review_candidates": review_candidates,
+            "excluded_candidates": excluded_candidates,
+        },
         "human_review_required": True,
         "next_api_call": {
             "status": "not_called",
-            "description": "Send agent_context to the LLM after the user confirms or edits the recommendation.",
+            "description": "Send the reviewed Agent 1 package to Agent 2 after human approval.",
         },
     }

@@ -597,6 +597,38 @@ h1 {
   box-shadow: 0 18px 44px rgba(31, 47, 43, 0.08);
 }
 
+.handoff-card {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  align-items: center;
+  margin-top: 16px;
+  padding: 18px;
+  border: 1px solid rgba(23, 33, 28, 0.08);
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, #ffffff, #f7f3e8);
+  box-shadow: 0 18px 44px rgba(31, 47, 43, 0.08);
+}
+
+.handoff-card span {
+  color: #b04d44;
+  font-size: 0.78rem;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.handoff-card h2 {
+  margin-top: 5px;
+  font-size: 1.1rem;
+}
+
+.handoff-card p {
+  margin-top: 6px;
+  color: #68746c;
+  line-height: 1.45;
+}
+
 .table-header {
   display: flex;
   justify-content: space-between;
@@ -729,6 +761,11 @@ td {
   }
 
   .table-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .handoff-card {
     align-items: flex-start;
     flex-direction: column;
   }

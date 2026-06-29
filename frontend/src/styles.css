@@ -873,10 +873,14 @@ h1 {
   justify-content: space-between;
   gap: 16px;
   align-items: center;
+  position: sticky;
+  top: 12px;
+  z-index: 8;
   padding: 16px 18px;
   border-bottom: 1px solid rgba(23, 33, 28, 0.08);
   background:
     linear-gradient(135deg, #17211c, #153f46);
+  box-shadow: 0 16px 36px rgba(23, 33, 28, 0.18);
   color: #ffffff;
 }
 

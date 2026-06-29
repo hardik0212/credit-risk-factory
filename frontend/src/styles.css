@@ -859,18 +859,18 @@ h1 {
 }
 
 .table-wrap {
-  overflow-x: auto;
+  overflow-x: hidden;
 }
 
 table {
   width: 100%;
   border-collapse: collapse;
-  min-width: 1080px;
+  table-layout: fixed;
 }
 
 th,
 td {
-  padding: 13px 16px;
+  padding: 12px 10px;
   border-bottom: 1px solid rgba(23, 33, 28, 0.07);
   text-align: left;
   vertical-align: top;
@@ -889,13 +889,11 @@ td {
 }
 
 .type-select {
-  min-width: 150px;
   padding: 0 10px;
   background: #fbf7ef;
 }
 
 .decision-select {
-  min-width: 146px;
   padding: 0 10px;
   background: #ffffff;
 }
@@ -910,12 +908,12 @@ td {
 .decision-badge {
   display: inline-flex;
   justify-content: center;
-  min-width: 104px;
+  max-width: 100%;
   padding: 7px 10px;
   border-radius: 999px;
   font-size: 0.78rem;
   font-weight: 850;
-  white-space: nowrap;
+  text-align: center;
 }
 
 .decision-badge.selected {
@@ -934,7 +932,6 @@ td {
 }
 
 .decision-reason {
-  min-width: 220px;
   color: #52635d;
   line-height: 1.35;
 }
@@ -991,6 +988,60 @@ td {
   }
 }
 
+@media (max-width: 1180px) {
+  table,
+  thead,
+  tbody,
+  tr,
+  th,
+  td {
+    display: block;
+  }
+
+  thead {
+    display: none;
+  }
+
+  tbody {
+    display: grid;
+    gap: 12px;
+    padding: 12px;
+  }
+
+  tr {
+    overflow: hidden;
+    border: 1px solid rgba(23, 33, 28, 0.08);
+    border-radius: 8px;
+    background: #ffffff;
+  }
+
+  td {
+    display: grid;
+    grid-template-columns: minmax(112px, 0.34fr) minmax(0, 1fr);
+    gap: 12px;
+    align-items: start;
+    padding: 10px 12px;
+    border-bottom: 1px solid rgba(23, 33, 28, 0.06);
+  }
+
+  td::before {
+    color: #52635d;
+    content: attr(data-label);
+    font-size: 0.74rem;
+    font-weight: 850;
+    text-transform: uppercase;
+  }
+
+  td:last-child {
+    border-bottom: 0;
+  }
+
+  .decision-select,
+  .type-select {
+    max-width: 280px;
+  }
+}
+
 @media (max-width: 720px) {
   .app-shell {
     padding: 14px;
@@ -1042,5 +1093,15 @@ td {
 
   .loading-steps {
     grid-template-columns: 1fr;
+  }
+
+  td {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+
+  .decision-select,
+  .type-select {
+    max-width: none;
   }
 }

@@ -124,11 +124,11 @@ export function ResultPanel({
 
                 return (
                   <tr key={column.name}>
-                    <td>{column.name}</td>
-                    <td>
+                    <td data-label="Column">{column.name}</td>
+                    <td data-label="Agent decision">
                       <span className={`decision-badge ${column.suggested_decision}`}>{column.suggested_decision_label}</span>
                     </td>
-                    <td>
+                    <td data-label="Reviewed decision">
                       <select
                         className={column.reviewed_decision !== column.suggested_decision ? "decision-select changed" : "decision-select"}
                         value={column.reviewed_decision}
@@ -143,9 +143,9 @@ export function ResultPanel({
                         <small className={`decision-override-note ${column.reviewed_decision}`}>Changed to {reviewedDecisionLabel}</small>
                       )}
                     </td>
-                    <td className="decision-reason">{column.decision_reason}</td>
-                    <td>{column.semantic_type}</td>
-                    <td>
+                    <td data-label="Reason" className="decision-reason">{column.decision_reason}</td>
+                    <td data-label="Suggested type">{column.semantic_type}</td>
+                    <td data-label="Reviewed type">
                       <select
                         className={column.reviewed_type !== column.semantic_type ? "type-select changed" : "type-select"}
                         value={column.reviewed_type}
@@ -156,8 +156,8 @@ export function ResultPanel({
                         ))}
                       </select>
                     </td>
-                    <td>{column.missing_pct}%</td>
-                    <td>{Object.keys(column.top_values || {}).slice(0, 3).join(", ") || "-"}</td>
+                    <td data-label="Missing">{column.missing_pct}%</td>
+                    <td data-label="Top values">{Object.keys(column.top_values || {}).slice(0, 3).join(", ") || "-"}</td>
                   </tr>
                 );
               })}

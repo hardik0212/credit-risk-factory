@@ -19,6 +19,8 @@ export function ResultPanel({
   reviewVariableCount,
   excludedVariableCount,
   leakageCount,
+  handoffError,
+  isCreatingHandoff,
   onTargetChange,
   onTypeChange,
   onDecisionChange,
@@ -133,9 +135,9 @@ export function ResultPanel({
             and {excludedVariableCount} are excluded before modeling.
           </p>
         </div>
-        <button className={`secondary-button ${canApprove ? "" : "attention"}`} onClick={handleApproveClick}>
+        <button className={`secondary-button ${canApprove ? "" : "attention"}`} onClick={handleApproveClick} disabled={isCreatingHandoff}>
           <BadgeCheck size={17} />
-          Approve for Agent 2
+          {isCreatingHandoff ? "Creating Agent 2 folder" : "Approve for Agent 2"}
         </button>
       </div>
 
@@ -248,7 +250,16 @@ export function ResultPanel({
         {confirmedPackage && (
           <div className="submission-ready">
             <BadgeCheck size={18} />
-            Agent 1 package ready for Agent 2 with {confirmedPackage.selected_variables.length} selected variable{confirmedPackage.selected_variables.length === 1 ? "" : "s"} and {confirmedPackage.review_variables.length} review item{confirmedPackage.review_variables.length === 1 ? "" : "s"}.
+            <div>
+              <strong>Agent 2 folder created: {confirmedPackage.handoff?.folder_name}</strong>
+              <span>{confirmedPackage.handoff?.folder_path}</span>
+            </div>
+          </div>
+        )}
+        {handoffError && (
+          <div className="error-box handoff-error">
+            <AlertTriangle size={18} />
+            {handoffError}
           </div>
         )}
       </div>

@@ -4,11 +4,14 @@ from uuid import uuid4
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 
+from .handoff import create_agent_two_handoff
 from .profiling import profile_csv
 
 BASE_DIR = Path(__file__).resolve().parents[1]
 UPLOAD_DIR = BASE_DIR / "uploads"
+OUTPUT_DIR = BASE_DIR / "agent_outputs"
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 app = FastAPI(title="Credit Risk Factory API", version="0.1.0")
 
@@ -49,3 +52,13 @@ async def upload_and_profile_dataset(file: UploadFile = File(...)):
         raise HTTPException(status_code=400, detail="Could not decode the CSV. Please use UTF-8 CSV input.") from exc
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Failed to profile dataset: {exc}") from exc
+
+
+@app.post("/api/agent-one/handoff")
+def create_agent_one_handoff(package: dict):
+    try:
+        return create_agent_two_handoff(package, upload_dir=UPLOAD_DIR, output_dir=OUTPUT_DIR)
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to create Agent 2 handoff: {exc}") from exc

@@ -20,6 +20,8 @@ export function AgentOnePage() {
   const [decisionOverrides, setDecisionOverrides] = useState({});
   const [selectedTarget, setSelectedTarget] = useState("");
   const [confirmedPackage, setConfirmedPackage] = useState(null);
+  const [handoffError, setHandoffError] = useState("");
+  const [isCreatingHandoff, setIsCreatingHandoff] = useState(false);
 
   const recommendation = profile?.agent_recommendation;
   const decisionLookup = useMemo(() => {
@@ -78,6 +80,7 @@ export function AgentOnePage() {
     setDecisionOverrides({});
     setSelectedTarget("");
     setConfirmedPackage(null);
+    setHandoffError("");
 
     const formData = new FormData();
     formData.append("file", file);
@@ -137,15 +140,32 @@ export function AgentOnePage() {
     setConfirmedPackage(null);
   }
 
-  function handleConfirmPackage() {
-    setConfirmedPackage(
-      buildAgentOnePackage({
-        profile,
-        reviewedColumns,
-        selectedTarget,
-        recommendation,
-      }),
-    );
+  async function handleConfirmPackage() {
+    setHandoffError("");
+    setIsCreatingHandoff(true);
+    const agentOnePackage = buildAgentOnePackage({
+      profile,
+      reviewedColumns,
+      selectedTarget,
+      recommendation,
+    });
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/agent-one/handoff`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(agentOnePackage),
+      });
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload.detail || "Could not create Agent 2 handoff folder.");
+      }
+      setConfirmedPackage({ ...agentOnePackage, handoff: payload });
+    } catch (handoffCreationError) {
+      setHandoffError(handoffCreationError.message);
+    } finally {
+      setIsCreatingHandoff(false);
+    }
   }
 
   return (
@@ -179,6 +199,8 @@ export function AgentOnePage() {
             reviewVariableCount={reviewVariableCount}
             excludedVariableCount={excludedVariableCount}
             leakageCount={leakageCount}
+            handoffError={handoffError}
+            isCreatingHandoff={isCreatingHandoff}
             onTargetChange={handleTargetChange}
             onTypeChange={handleTypeChange}
             onDecisionChange={handleDecisionChange}

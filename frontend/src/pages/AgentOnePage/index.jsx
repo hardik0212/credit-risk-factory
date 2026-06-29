@@ -2,14 +2,18 @@ import React, { useMemo, useState } from "react";
 import { Topbar } from "../../components/layout/Topbar";
 import { buildAgentOnePackage } from "../../lib/agentPackage";
 import { API_BASE_URL } from "../../lib/constants";
+import { AgentLoadingPanel } from "./components/AgentLoadingPanel";
 import { Hero } from "./components/Hero";
 import { IntakePanel } from "./components/IntakePanel";
 import { ResultPanel } from "./components/ResultPanel";
+
+const wait = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
 
 export function AgentOnePage() {
   const [file, setFile] = useState(null);
   const [profile, setProfile] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [loadingPhase, setLoadingPhase] = useState("uploading");
   const [error, setError] = useState("");
   const [typeOverrides, setTypeOverrides] = useState({});
   const [selectedTarget, setSelectedTarget] = useState("");
@@ -38,6 +42,7 @@ export function AgentOnePage() {
   async function handleUpload() {
     if (!file) return;
     setIsUploading(true);
+    setLoadingPhase("uploading");
     setError("");
     setProfile(null);
     setTypeOverrides({});
@@ -48,15 +53,25 @@ export function AgentOnePage() {
     formData.append("file", file);
 
     try {
+      await wait(250);
+      setLoadingPhase("profiling");
+      await wait(350);
+      setLoadingPhase("calling_ai");
+
       const response = await fetch(`${API_BASE_URL}/api/datasets/profile`, {
         method: "POST",
         body: formData,
       });
 
       const payload = await response.json();
+      setLoadingPhase("response_received");
+      await wait(500);
+
       if (!response.ok) {
         throw new Error(payload.detail || "Upload failed");
       }
+      setLoadingPhase("processing");
+      await wait(550);
       setProfile(payload);
       setSelectedTarget(payload.agent_recommendation?.recommended_target || "");
     } catch (uploadError) {
@@ -100,19 +115,23 @@ export function AgentOnePage() {
           onFileChange={setFile}
           onUpload={handleUpload}
         />
-        <ResultPanel
-          profile={profile}
-          recommendation={recommendation}
-          reviewedColumns={reviewedColumns}
-          selectedTarget={selectedTarget}
-          confirmedPackage={confirmedPackage}
-          changedTypeCount={changedTypeCount}
-          excludedColumnCount={excludedColumnCount}
-          leakageCount={leakageCount}
-          onTargetChange={handleTargetChange}
-          onTypeChange={handleTypeChange}
-          onConfirmPackage={handleConfirmPackage}
-        />
+        {isUploading ? (
+          <AgentLoadingPanel phase={loadingPhase} />
+        ) : (
+          <ResultPanel
+            profile={profile}
+            recommendation={recommendation}
+            reviewedColumns={reviewedColumns}
+            selectedTarget={selectedTarget}
+            confirmedPackage={confirmedPackage}
+            changedTypeCount={changedTypeCount}
+            excludedColumnCount={excludedColumnCount}
+            leakageCount={leakageCount}
+            onTargetChange={handleTargetChange}
+            onTypeChange={handleTypeChange}
+            onConfirmPackage={handleConfirmPackage}
+          />
+        )}
       </section>
     </main>
   );

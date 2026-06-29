@@ -154,6 +154,7 @@ def merge_ai_with_heuristic_recommendation(
     if ai_result["status"] != "success" or not ai_result.get("recommendation"):
         recommendation = dict(heuristic_recommendation)
         recommendation["ai_status"] = ai_result
+        recommendation["ai_help_used"] = False
         recommendation["recommendation_source"] = "heuristic"
         return recommendation
 
@@ -164,5 +165,6 @@ def merge_ai_with_heuristic_recommendation(
         "description": "Send the reviewed Agent 1 package to Agent 2 after human approval.",
     }
     recommendation["ai_status"] = {key: value for key, value in ai_result.items() if key != "recommendation"}
+    recommendation["ai_help_used"] = True
     recommendation["recommendation_source"] = "openai"
     return recommendation

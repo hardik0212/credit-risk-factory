@@ -142,14 +142,16 @@ export function AgentOnePage() {
       <Topbar />
       <Hero profile={profile} confirmedPackage={confirmedPackage} />
 
-      <section className="workspace">
-        <IntakePanel
-          file={file}
-          isUploading={isUploading}
-          error={error}
-          onFileChange={setFile}
-          onUpload={handleUpload}
-        />
+      <section className={`workspace ${profile && !isUploading ? "workspace-results" : ""}`}>
+        {(!profile || isUploading) && (
+          <IntakePanel
+            file={file}
+            isUploading={isUploading}
+            error={error}
+            onFileChange={setFile}
+            onUpload={handleUpload}
+          />
+        )}
         {isUploading ? (
           <AgentLoadingPanel phase={loadingPhase} />
         ) : (

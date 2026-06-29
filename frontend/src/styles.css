@@ -261,6 +261,10 @@ h1 {
   margin: 0 auto;
 }
 
+.workspace-results {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .upload-panel,
 .result-panel {
   border-radius: 8px;

@@ -36,6 +36,7 @@ export function ResultPanel({
   const recommendationDetail = aiHelpUsed
     ? `${providerLabel} reviewed the compact column profile and 100-row sample.`
     : "No AI API call was used; the backend generated this with deterministic rules.";
+  const decisionByColumn = buildDecisionLookup(variableSelection);
 
   return (
     <div className="result-panel">
@@ -106,6 +107,8 @@ export function ResultPanel({
             <thead>
               <tr>
                 <th>Column</th>
+                <th>Agent decision</th>
+                <th>Reason</th>
                 <th>Suggested type</th>
                 <th>Reviewed type</th>
                 <th>Missing</th>
@@ -113,25 +116,37 @@ export function ResultPanel({
               </tr>
             </thead>
             <tbody>
-              {reviewedColumns.map((column) => (
-                <tr key={column.name}>
-                  <td>{column.name}</td>
-                  <td>{column.semantic_type}</td>
-                  <td>
-                    <select
-                      className={column.reviewed_type !== column.semantic_type ? "type-select changed" : "type-select"}
-                      value={column.reviewed_type}
-                      onChange={(event) => onTypeChange(column.name, event.target.value)}
-                    >
-                      {TYPE_OPTIONS.map((type) => (
-                        <option value={type} key={type}>{type}</option>
-                      ))}
-                    </select>
-                  </td>
-                  <td>{column.missing_pct}%</td>
-                  <td>{Object.keys(column.top_values || {}).slice(0, 3).join(", ") || "-"}</td>
-                </tr>
-              ))}
+              {reviewedColumns.map((column) => {
+                const decision = decisionByColumn[column.name] || {
+                  status: "review",
+                  label: "Review",
+                  reason: "Not classified by Agent 1. Please review before handoff.",
+                };
+
+                return (
+                  <tr key={column.name}>
+                    <td>{column.name}</td>
+                    <td>
+                      <span className={`decision-badge ${decision.status}`}>{decision.label}</span>
+                    </td>
+                    <td className="decision-reason">{decision.reason}</td>
+                    <td>{column.semantic_type}</td>
+                    <td>
+                      <select
+                        className={column.reviewed_type !== column.semantic_type ? "type-select changed" : "type-select"}
+                        value={column.reviewed_type}
+                        onChange={(event) => onTypeChange(column.name, event.target.value)}
+                      >
+                        {TYPE_OPTIONS.map((type) => (
+                          <option value={type} key={type}>{type}</option>
+                        ))}
+                      </select>
+                    </td>
+                    <td>{column.missing_pct}%</td>
+                    <td>{Object.keys(column.top_values || {}).slice(0, 3).join(", ") || "-"}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -144,4 +159,25 @@ export function ResultPanel({
       </div>
     </div>
   );
+}
+
+function buildDecisionLookup(variableSelection) {
+  const lookup = {};
+  const groups = [
+    ["selected_candidates", "selected", "Selected"],
+    ["review_candidates", "review", "Needs review"],
+    ["excluded_candidates", "excluded", "Excluded"],
+  ];
+
+  groups.forEach(([key, status, label]) => {
+    (variableSelection[key] || []).forEach((item) => {
+      lookup[item.name] = {
+        status,
+        label,
+        reason: item.reason,
+      };
+    });
+  });
+
+  return lookup;
 }

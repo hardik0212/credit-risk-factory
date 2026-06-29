@@ -864,7 +864,7 @@ h1 {
 table {
   width: 100%;
   border-collapse: collapse;
-  min-width: 820px;
+  min-width: 1080px;
 }
 
 th,
@@ -897,6 +897,38 @@ td {
   border-color: rgba(176, 77, 68, 0.5);
   color: #8d321f;
   background: #fff0ea;
+}
+
+.decision-badge {
+  display: inline-flex;
+  justify-content: center;
+  min-width: 104px;
+  padding: 7px 10px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 850;
+  white-space: nowrap;
+}
+
+.decision-badge.selected {
+  color: #24584e;
+  background: #e5f0eb;
+}
+
+.decision-badge.review {
+  color: #735224;
+  background: #fbefd7;
+}
+
+.decision-badge.excluded {
+  color: #8d321f;
+  background: #fff0ea;
+}
+
+.decision-reason {
+  min-width: 220px;
+  color: #52635d;
+  line-height: 1.35;
 }
 
 .submission-ready {

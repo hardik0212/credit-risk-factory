@@ -724,7 +724,8 @@ h1 {
 }
 
 .target-review select,
-.type-select {
+.type-select,
+.decision-select {
   width: 100%;
   min-height: 38px;
   border: 1px solid rgba(23, 33, 28, 0.14);
@@ -893,7 +894,14 @@ td {
   background: #fbf7ef;
 }
 
-.type-select.changed {
+.decision-select {
+  min-width: 146px;
+  padding: 0 10px;
+  background: #ffffff;
+}
+
+.type-select.changed,
+.decision-select.changed {
   border-color: rgba(176, 77, 68, 0.5);
   color: #8d321f;
   background: #fff0ea;
@@ -929,6 +937,25 @@ td {
   min-width: 220px;
   color: #52635d;
   line-height: 1.35;
+}
+
+.decision-override-note {
+  display: block;
+  margin-top: 6px;
+  font-size: 0.74rem;
+  font-weight: 850;
+}
+
+.decision-override-note.selected {
+  color: #24584e;
+}
+
+.decision-override-note.review {
+  color: #735224;
+}
+
+.decision-override-note.excluded {
+  color: #8d321f;
 }
 
 .submission-ready {

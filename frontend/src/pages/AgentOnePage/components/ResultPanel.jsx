@@ -4,6 +4,7 @@ import { EmptyState } from "../../../components/ui/EmptyState";
 import { InsightList } from "../../../components/ui/InsightList";
 import { Metric } from "../../../components/ui/Metric";
 import { TYPE_OPTIONS } from "../../../lib/constants";
+import { DECISION_OPTIONS, getDecisionLabel } from "../../../lib/variableDecisions";
 
 export function ResultPanel({
   profile,
@@ -12,10 +13,15 @@ export function ResultPanel({
   selectedTarget,
   confirmedPackage,
   changedTypeCount,
+  changedDecisionCount,
   excludedColumnCount,
+  selectedVariableCount,
+  reviewVariableCount,
+  excludedVariableCount,
   leakageCount,
   onTargetChange,
   onTypeChange,
+  onDecisionChange,
   onConfirmPackage,
 }) {
   if (!profile) {
@@ -26,9 +32,6 @@ export function ResultPanel({
     );
   }
 
-  const variableSelection = recommendation?.variable_selection || {};
-  const selectedCandidateCount = variableSelection.selected_candidates?.length || 0;
-  const reviewCandidateCount = variableSelection.review_candidates?.length || 0;
   const aiStatus = recommendation?.ai_status;
   const aiHelpUsed = Boolean(recommendation?.ai_help_used);
   const providerLabel = aiStatus?.provider && aiStatus.provider !== "none" ? aiStatus.provider.toUpperCase() : "Backend";
@@ -36,7 +39,6 @@ export function ResultPanel({
   const recommendationDetail = aiHelpUsed
     ? `${providerLabel} reviewed the compact column profile and 100-row sample.`
     : "No AI API call was used; the backend generated this with deterministic rules.";
-  const decisionByColumn = buildDecisionLookup(variableSelection);
 
   return (
     <div className="result-panel">
@@ -44,7 +46,7 @@ export function ResultPanel({
         <Metric label="Rows" value={profile.row_count.toLocaleString()} />
         <Metric label="Columns" value={profile.column_count.toLocaleString()} />
         <Metric label="Target" value={selectedTarget || "Review"} emphasis />
-        <Metric label="Agent 1 flags" value={(changedTypeCount + excludedColumnCount + leakageCount + reviewCandidateCount).toLocaleString()} />
+        <Metric label="Agent 1 flags" value={(changedTypeCount + changedDecisionCount + excludedColumnCount + leakageCount + reviewVariableCount).toLocaleString()} />
       </div>
 
       <div className="recommendation-card">
@@ -76,7 +78,7 @@ export function ResultPanel({
       <div className="insight-grid">
         <InsightList title="ID Columns" icon={<Fingerprint size={18} />} items={recommendation.id_columns} empty="No obvious ID fields" />
         <InsightList title="Possible Leakage" icon={<AlertTriangle size={18} />} items={recommendation.possible_leakage_columns} empty="No leakage hints found" />
-        <InsightList title="Reviewer Changes" icon={<SlidersHorizontal size={18} />} items={[`${changedTypeCount} type overrides`, `${excludedColumnCount} excluded fields`]} empty="No reviewer changes" />
+        <InsightList title="Reviewer Changes" icon={<SlidersHorizontal size={18} />} items={[`${changedTypeCount} type overrides`, `${changedDecisionCount} decision overrides`, `${excludedColumnCount} excluded type overrides`]} empty="No reviewer changes" />
         <InsightList title="AI Help" icon={<Send size={18} />} items={[recommendationSource, `Provider: ${providerLabel}`, `API status: ${aiStatus?.status || "unknown"}`]} empty="AI status unavailable" />
       </div>
 
@@ -85,8 +87,8 @@ export function ResultPanel({
           <span>Agent 1 output</span>
           <h2>Initial variable-selection package</h2>
           <p>
-            {selectedCandidateCount} variables are initially selected, {reviewCandidateCount} need review,
-            and {variableSelection.excluded_candidates?.length || 0} are excluded before modeling.
+            {selectedVariableCount} variables are selected, {reviewVariableCount} need review,
+            and {excludedVariableCount} are excluded before modeling.
           </p>
         </div>
         <button className="secondary-button" onClick={onConfirmPackage}>
@@ -108,6 +110,7 @@ export function ResultPanel({
               <tr>
                 <th>Column</th>
                 <th>Agent decision</th>
+                <th>Reviewed decision</th>
                 <th>Reason</th>
                 <th>Suggested type</th>
                 <th>Reviewed type</th>
@@ -117,19 +120,30 @@ export function ResultPanel({
             </thead>
             <tbody>
               {reviewedColumns.map((column) => {
-                const decision = decisionByColumn[column.name] || {
-                  status: "review",
-                  label: "Review",
-                  reason: "Not classified by Agent 1. Please review before handoff.",
-                };
+                const reviewedDecisionLabel = getDecisionLabel(column.reviewed_decision);
 
                 return (
                   <tr key={column.name}>
                     <td>{column.name}</td>
                     <td>
-                      <span className={`decision-badge ${decision.status}`}>{decision.label}</span>
+                      <span className={`decision-badge ${column.suggested_decision}`}>{column.suggested_decision_label}</span>
                     </td>
-                    <td className="decision-reason">{decision.reason}</td>
+                    <td>
+                      <select
+                        className={column.reviewed_decision !== column.suggested_decision ? "decision-select changed" : "decision-select"}
+                        value={column.reviewed_decision}
+                        onChange={(event) => onDecisionChange(column.name, event.target.value)}
+                        aria-label={`Reviewed decision for ${column.name}`}
+                      >
+                        {DECISION_OPTIONS.map((decision) => (
+                          <option value={decision.value} key={decision.value}>{decision.label}</option>
+                        ))}
+                      </select>
+                      {column.reviewed_decision !== column.suggested_decision && (
+                        <small className={`decision-override-note ${column.reviewed_decision}`}>Changed to {reviewedDecisionLabel}</small>
+                      )}
+                    </td>
+                    <td className="decision-reason">{column.decision_reason}</td>
                     <td>{column.semantic_type}</td>
                     <td>
                       <select
@@ -153,31 +167,10 @@ export function ResultPanel({
         {confirmedPackage && (
           <div className="submission-ready">
             <BadgeCheck size={18} />
-            Agent 1 package ready for Agent 2 with {confirmedPackage.selected_variables.length} selected variable{confirmedPackage.selected_variables.length === 1 ? "" : "s"}.
+            Agent 1 package ready for Agent 2 with {confirmedPackage.selected_variables.length} selected variable{confirmedPackage.selected_variables.length === 1 ? "" : "s"} and {confirmedPackage.review_variables.length} review item{confirmedPackage.review_variables.length === 1 ? "" : "s"}.
           </div>
         )}
       </div>
     </div>
   );
-}
-
-function buildDecisionLookup(variableSelection) {
-  const lookup = {};
-  const groups = [
-    ["selected_candidates", "selected", "Selected"],
-    ["review_candidates", "review", "Needs review"],
-    ["excluded_candidates", "excluded", "Excluded"],
-  ];
-
-  groups.forEach(([key, status, label]) => {
-    (variableSelection[key] || []).forEach((item) => {
-      lookup[item.name] = {
-        status,
-        label,
-        reason: item.reason,
-      };
-    });
-  });
-
-  return lookup;
 }

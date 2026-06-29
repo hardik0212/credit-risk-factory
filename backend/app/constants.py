@@ -2,8 +2,8 @@ SAMPLE_ROWS = 100
 MAX_TOP_VALUES = 8
 PROFILE_CHUNK_SIZE = 50_000
 DEFAULT_OPENAI_MODEL = "gpt-4.1-mini"
-DEFAULT_GEMINI_MODEL = "gemini-2.5-flash"
-DEFAULT_GEMINI_FALLBACK_MODELS = ("gemini-3.5-flash", "gemini-2.0-flash")
+DEFAULT_GEMINI_MODEL = "gemini-flash-lite-latest"
+DEFAULT_GEMINI_FALLBACK_MODELS = ("gemini-2.0-flash-lite", "gemini-2.0-flash")
 
 TARGET_HINTS = (
     "target",

@@ -4,7 +4,7 @@ import json
 import os
 from typing import Any
 
-from .constants import DEFAULT_OPENAI_MODEL
+from .constants import DEFAULT_GEMINI_FALLBACK_MODELS, DEFAULT_GEMINI_MODEL, DEFAULT_OPENAI_MODEL
 
 
 AGENT_RECOMMENDATION_SCHEMA = {
@@ -82,24 +82,68 @@ def build_compact_ai_context(
         "file_name": file_name,
         "row_count": row_count,
         "column_count": column_count,
-        "columns": columns,
-        "sample_rows": sample_rows[:100],
+        "columns": [compact_column_profile(column) for column in columns],
+        "sample_rows": [compact_sample_row(row) for row in sample_rows[:100]],
         "heuristic_recommendation": heuristic_recommendation,
         "instruction": "Use only this compact profile and sample. The full CSV is not available to the AI.",
     }
 
 
+def compact_column_profile(column: dict[str, Any]) -> dict[str, Any]:
+    top_values = column.get("top_values") or {}
+    return {
+        "name": column.get("name"),
+        "dtype": column.get("dtype"),
+        "semantic_type": column.get("semantic_type"),
+        "missing_pct": column.get("missing_pct"),
+        "unique_count_estimate": column.get("unique_count_estimate"),
+        "top_values": list(top_values.keys())[:5],
+        "numeric_stats": column.get("numeric_stats"),
+    }
+
+
+def compact_sample_row(row: dict[str, Any]) -> dict[str, Any]:
+    return {key: compact_value(value) for key, value in row.items()}
+
+
+def compact_value(value: Any) -> Any:
+    if isinstance(value, str) and len(value) > 80:
+        return f"{value[:77]}..."
+    return value
+
+
 def get_ai_recommendation(agent_context: dict[str, Any]) -> dict[str, Any]:
-    api_key = os.getenv("OPENAI_API_KEY")
-    if not api_key:
+    provider = resolve_ai_provider()
+    if provider["name"] == "none":
         return {
             "status": "skipped",
-            "provider": "openai",
-            "model": os.getenv("OPENAI_MODEL", DEFAULT_OPENAI_MODEL),
-            "reason": "OPENAI_API_KEY is not set.",
+            "provider": "none",
+            "model": None,
+            "reason": "No AI API key is set. Add GOOGLE_API_KEY or OPENAI_API_KEY.",
             "recommendation": None,
         }
 
+    if provider["name"] == "google":
+        return get_gemini_recommendation(agent_context, provider["api_key"])
+
+    return get_openai_recommendation(agent_context, provider["api_key"])
+
+
+def resolve_ai_provider() -> dict[str, str | None]:
+    google_api_key = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
+    openai_api_key = os.getenv("OPENAI_API_KEY")
+
+    if google_api_key:
+        return {"name": "google", "api_key": google_api_key}
+    if openai_api_key and openai_api_key.startswith("sk-"):
+        return {"name": "openai", "api_key": openai_api_key}
+    if openai_api_key:
+        return {"name": "google", "api_key": openai_api_key}
+
+    return {"name": "none", "api_key": None}
+
+
+def get_openai_recommendation(agent_context: dict[str, Any], api_key: str) -> dict[str, Any]:
     try:
         from openai import OpenAI
 
@@ -147,6 +191,77 @@ def get_ai_recommendation(agent_context: dict[str, Any]) -> dict[str, Any]:
         }
 
 
+def get_gemini_recommendation(agent_context: dict[str, Any], api_key: str) -> dict[str, Any]:
+    model = os.getenv("GEMINI_MODEL", DEFAULT_GEMINI_MODEL)
+    prompt = (
+        "You are Agent 1 in a credit risk model factory. "
+        "You receive only compact dataset metadata and up to 100 sample rows. "
+        "Do not assume access to the full file. Identify target candidates, IDs, dates, "
+        "leakage risks, initial variable selection, and human review questions. "
+        "Be conservative for banking model governance. Return only valid JSON with this shape: "
+        "{recommended_target, target_candidates, id_columns, date_columns, possible_leakage_columns, "
+        "variable_selection: {agent_scope, selected_candidates, review_candidates, excluded_candidates}, "
+        "business_summary, human_review_questions}. Each candidate item must include name and reason; "
+        "target candidates also include confidence.\n\n"
+        f"{json.dumps(agent_context, default=str)}"
+    )
+
+    try:
+        response_model, text = generate_gemini_json(prompt, api_key, model)
+        return {
+            "status": "success",
+            "provider": "google",
+            "model": response_model,
+            "reason": "Gemini recommendation generated from compact profile and 100-row sample.",
+            "recommendation": json.loads(text),
+        }
+    except Exception as exc:
+        return {
+            "status": "error",
+            "provider": "google",
+            "model": model,
+            "reason": str(exc),
+            "recommendation": None,
+        }
+
+
+def generate_gemini_json(prompt: str, api_key: str, primary_model: str) -> tuple[str, str]:
+    import requests
+
+    candidate_models = list(dict.fromkeys([primary_model, *DEFAULT_GEMINI_FALLBACK_MODELS]))
+    errors: list[str] = []
+
+    for model in candidate_models:
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
+        try:
+            response = requests.post(
+                url,
+                params={"key": api_key},
+                json={
+                    "contents": [{"parts": [{"text": prompt}]}],
+                    "generationConfig": {
+                        "responseMimeType": "application/json",
+                        "temperature": 0.2,
+                    },
+                },
+                timeout=25,
+            )
+        except requests.RequestException as exc:
+            errors.append(f"{model}: {exc}")
+            continue
+
+        if response.status_code < 400:
+            payload = response.json()
+            text = payload["candidates"][0]["content"]["parts"][0]["text"]
+            return model, text
+
+        errors.append(f"{model}: {response.status_code} {response.text[:300]}")
+        if response.status_code not in {429, 500, 502, 503, 504}:
+            break
+
+    raise RuntimeError("Gemini request failed. " + " | ".join(errors))
+
+
 def merge_ai_with_heuristic_recommendation(
     heuristic_recommendation: dict[str, Any],
     ai_result: dict[str, Any],
@@ -166,5 +281,5 @@ def merge_ai_with_heuristic_recommendation(
     }
     recommendation["ai_status"] = {key: value for key, value in ai_result.items() if key != "recommendation"}
     recommendation["ai_help_used"] = True
-    recommendation["recommendation_source"] = "openai"
+    recommendation["recommendation_source"] = ai_result.get("provider", "ai")
     return recommendation

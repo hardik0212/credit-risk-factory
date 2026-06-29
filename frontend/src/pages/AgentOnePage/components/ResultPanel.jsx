@@ -31,9 +31,10 @@ export function ResultPanel({
   const reviewCandidateCount = variableSelection.review_candidates?.length || 0;
   const aiStatus = recommendation?.ai_status;
   const aiHelpUsed = Boolean(recommendation?.ai_help_used);
+  const providerLabel = aiStatus?.provider && aiStatus.provider !== "none" ? aiStatus.provider.toUpperCase() : "Backend";
   const recommendationSource = aiHelpUsed ? "AI help used" : "Backend rules used";
   const recommendationDetail = aiHelpUsed
-    ? "OpenAI reviewed the compact column profile and 100-row sample."
+    ? `${providerLabel} reviewed the compact column profile and 100-row sample.`
     : "No AI API call was used; the backend generated this with deterministic rules.";
 
   return (
@@ -55,7 +56,7 @@ export function ResultPanel({
             Agent 1 has prepared the schema and initial variable-selection recommendation. Review the
             target, override types, exclude fields, and approve the package for Agent 2.
           </p>
-          <div className={`ai-status ${recommendation?.recommendation_source === "openai" ? "success" : "muted"}`}>
+          <div className={`ai-status ${aiHelpUsed ? "success" : "muted"}`}>
             <span>{recommendationSource}</span>
             <small>{recommendationDetail} {aiStatus?.reason || ""}</small>
           </div>
@@ -75,7 +76,7 @@ export function ResultPanel({
         <InsightList title="ID Columns" icon={<Fingerprint size={18} />} items={recommendation.id_columns} empty="No obvious ID fields" />
         <InsightList title="Possible Leakage" icon={<AlertTriangle size={18} />} items={recommendation.possible_leakage_columns} empty="No leakage hints found" />
         <InsightList title="Reviewer Changes" icon={<SlidersHorizontal size={18} />} items={[`${changedTypeCount} type overrides`, `${excludedColumnCount} excluded fields`]} empty="No reviewer changes" />
-        <InsightList title="AI Help" icon={<Send size={18} />} items={[recommendationSource, `API status: ${aiStatus?.status || "unknown"}`]} empty="AI status unavailable" />
+        <InsightList title="AI Help" icon={<Send size={18} />} items={[recommendationSource, `Provider: ${providerLabel}`, `API status: ${aiStatus?.status || "unknown"}`]} empty="AI status unavailable" />
       </div>
 
       <div className="handoff-card">

@@ -1,5 +1,5 @@
-import React from "react";
-import { AlertTriangle, BadgeCheck, Fingerprint, Send, SlidersHorizontal } from "lucide-react";
+import React, { useMemo, useState } from "react";
+import { AlertTriangle, BadgeCheck, CheckCircle2, Fingerprint, Layers3, Send, ShieldAlert, SlidersHorizontal, X } from "lucide-react";
 import { EmptyState } from "../../../components/ui/EmptyState";
 import { InsightList } from "../../../components/ui/InsightList";
 import { Metric } from "../../../components/ui/Metric";
@@ -22,8 +22,16 @@ export function ResultPanel({
   onTargetChange,
   onTypeChange,
   onDecisionChange,
+  onBulkDecisionChange,
   onConfirmPackage,
 }) {
+  const [selectedColumnNames, setSelectedColumnNames] = useState([]);
+  const [showPendingModal, setShowPendingModal] = useState(false);
+  const selectedColumnSet = useMemo(() => new Set(selectedColumnNames), [selectedColumnNames]);
+  const actionableColumns = reviewedColumns.filter((column) => column.name !== selectedTarget && column.reviewed_type !== "exclude");
+  const pendingReviewColumns = actionableColumns.filter((column) => column.reviewed_decision === "review");
+  const canApprove = pendingReviewColumns.length === 0;
+
   if (!profile) {
     return (
       <div className="result-panel">
@@ -39,6 +47,40 @@ export function ResultPanel({
   const recommendationDetail = aiHelpUsed
     ? `${providerLabel} reviewed the compact column profile and 100-row sample.`
     : "No AI API call was used; the backend generated this with deterministic rules.";
+
+  function toggleColumnSelection(columnName) {
+    setSelectedColumnNames((current) => (
+      current.includes(columnName)
+        ? current.filter((name) => name !== columnName)
+        : [...current, columnName]
+    ));
+  }
+
+  function selectPendingReviews() {
+    setSelectedColumnNames(pendingReviewColumns.map((column) => column.name));
+  }
+
+  function selectAllColumns() {
+    setSelectedColumnNames(reviewedColumns.map((column) => column.name));
+  }
+
+  function clearSelectedRows() {
+    setSelectedColumnNames([]);
+  }
+
+  function applyBulkDecision(nextDecision) {
+    if (!selectedColumnNames.length) return;
+    onBulkDecisionChange(selectedColumnNames, nextDecision);
+    setSelectedColumnNames([]);
+  }
+
+  function handleApproveClick() {
+    if (!canApprove) {
+      setShowPendingModal(true);
+      return;
+    }
+    onConfirmPackage();
+  }
 
   return (
     <div className="result-panel">
@@ -91,7 +133,7 @@ export function ResultPanel({
             and {excludedVariableCount} are excluded before modeling.
           </p>
         </div>
-        <button className="secondary-button" onClick={onConfirmPackage}>
+        <button className={`secondary-button ${canApprove ? "" : "attention"}`} onClick={handleApproveClick}>
           <BadgeCheck size={17} />
           Approve for Agent 2
         </button>
@@ -101,13 +143,42 @@ export function ResultPanel({
         <div className="table-header">
           <div>
             <h2>Human Schema & Variable Review</h2>
-            <p>Adjust suggested types or exclude fields before Agent 2 receives the package.</p>
+            <p>Resolve every Needs review item before Agent 2 receives the package.</p>
+          </div>
+        </div>
+        <div className="decision-workbench">
+          <div>
+            <span>Decision workbench</span>
+            <strong>{pendingReviewColumns.length} pending review{pendingReviewColumns.length === 1 ? "" : "s"}</strong>
+            <p>{selectedColumnNames.length ? `${selectedColumnNames.length} row${selectedColumnNames.length === 1 ? "" : "s"} selected` : "Select multiple rows, then apply one decision to all of them."}</p>
+          </div>
+          <div className="bulk-actions">
+            <button type="button" onClick={selectPendingReviews} disabled={!pendingReviewColumns.length}>
+              <ShieldAlert size={16} />
+              Select pending
+            </button>
+            <button type="button" onClick={selectAllColumns} disabled={!reviewedColumns.length}>
+              <Layers3 size={16} />
+              Select all
+            </button>
+            <button type="button" onClick={() => applyBulkDecision("selected")} disabled={!selectedColumnNames.length}>
+              <CheckCircle2 size={16} />
+              Mark selected
+            </button>
+            <button type="button" onClick={() => applyBulkDecision("excluded")} disabled={!selectedColumnNames.length}>
+              <X size={16} />
+              Exclude
+            </button>
+            <button type="button" className="ghost-action" onClick={clearSelectedRows} disabled={!selectedColumnNames.length}>
+              Clear
+            </button>
           </div>
         </div>
         <div className="table-wrap">
           <table>
             <thead>
               <tr>
+                <th>Select</th>
                 <th>Column</th>
                 <th>Agent decision</th>
                 <th>Reviewed decision</th>
@@ -124,6 +195,16 @@ export function ResultPanel({
 
                 return (
                   <tr key={column.name}>
+                    <td data-label="Select">
+                      <label className="row-check">
+                        <input
+                          type="checkbox"
+                          checked={selectedColumnSet.has(column.name)}
+                          onChange={() => toggleColumnSelection(column.name)}
+                        />
+                        <span>{selectedColumnSet.has(column.name) ? "Selected" : "Pick"}</span>
+                      </label>
+                    </td>
                     <td data-label="Column">{column.name}</td>
                     <td data-label="Agent decision">
                       <span className={`decision-badge ${column.suggested_decision}`}>{column.suggested_decision_label}</span>
@@ -171,6 +252,44 @@ export function ResultPanel({
           </div>
         )}
       </div>
+      {showPendingModal && (
+        <div className="modal-backdrop" role="presentation">
+          <div className="review-modal" role="dialog" aria-modal="true" aria-labelledby="pending-review-title">
+            <button className="modal-close" type="button" onClick={() => setShowPendingModal(false)} aria-label="Close pending reviews dialog">
+              <X size={18} />
+            </button>
+            <div className="modal-icon">
+              <ShieldAlert size={28} />
+            </div>
+            <span>Approval blocked</span>
+            <h2 id="pending-review-title">Some reviews are still pending</h2>
+            <p>
+              {pendingReviewColumns.length} column{pendingReviewColumns.length === 1 ? " is" : "s are"} still marked as Needs review.
+              Choose Selected or Excluded before handing this package to Agent 2.
+            </p>
+            <div className="pending-list">
+              {pendingReviewColumns.slice(0, 8).map((column) => (
+                <span key={column.name}>{column.name}</span>
+              ))}
+              {pendingReviewColumns.length > 8 && <span>+{pendingReviewColumns.length - 8} more</span>}
+            </div>
+            <div className="modal-actions">
+              <button
+                type="button"
+                onClick={() => {
+                  selectPendingReviews();
+                  setShowPendingModal(false);
+                }}
+              >
+                Select pending rows
+              </button>
+              <button type="button" className="secondary-modal-action" onClick={() => setShowPendingModal(false)}>
+                Keep reviewing
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

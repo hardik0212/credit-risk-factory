@@ -121,6 +121,17 @@ export function AgentOnePage() {
     setConfirmedPackage(null);
   }
 
+  function handleBulkDecisionChange(columnNames, nextDecision) {
+    setDecisionOverrides((current) => {
+      const next = { ...current };
+      columnNames.forEach((columnName) => {
+        next[columnName] = nextDecision;
+      });
+      return next;
+    });
+    setConfirmedPackage(null);
+  }
+
   function handleTargetChange(nextTarget) {
     setSelectedTarget(nextTarget);
     setConfirmedPackage(null);
@@ -171,6 +182,7 @@ export function AgentOnePage() {
             onTargetChange={handleTargetChange}
             onTypeChange={handleTypeChange}
             onDecisionChange={handleDecisionChange}
+            onBulkDecisionChange={handleBulkDecisionChange}
             onConfirmPackage={handleConfirmPackage}
           />
         )}
